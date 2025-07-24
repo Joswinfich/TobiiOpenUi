@@ -1,0 +1,16 @@
+{
+  "name": "tobii-open-ui",
+  "version": "1.0.0",
+  "description": "Tobii open UI - Eye tracking application with Talon integration for Tobii 5",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0"
+  },
+  "dependencies": {}
+}

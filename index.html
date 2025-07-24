@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tobii Open UI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="controls">
+      <button id="selectImageBtn" class="control-btn">
+        select image file | file selected: <span id="fileName">none</span>
+      </button>
+      <button id="startTrackingBtn" class="control-btn">
+        start eye tracking
+      </button>
+      <button id="stopTrackingBtn" class="control-btn">
+        stop tracking
+      </button>
+    </div>
+    
+    <div class="image-container">
+      <div id="imageDisplay">
+        <div class="placeholder-text">IMAGE</div>
+      </div>
+      <div id="gazePointer" class="gaze-pointer"></div>
+    </div>
+    
+    <div class="status-bar">
+      <span id="talonStatus">Talon: Checking...</span>
+      <span id="trackingStatus">Tracking: Off</span>
+      <span id="gazeCoords">X: 0, Y: 0</span>
+      <button id="retryBtn" class="retry-btn">Retry Connection</button>
+    </div>
+    
+    <div class="debug-panel">
+      <h3>Debug Log</h3>
+      <div id="debugLog" class="debug-log"></div>
+      <button id="clearLogBtn" class="clear-log-btn">Clear Log</button>
+    </div>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
+</html>
