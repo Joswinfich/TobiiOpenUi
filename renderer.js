@@ -21,16 +21,54 @@ let currentImage = null;
 let imageRect = null;
 let lastGazeData = null;
 
-// Debug logging
-function log(message, type = 'info') {
-  const timestamp = new Date().toLocaleTimeString();
-  const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
-  debugLog.textContent += logEntry;
-  debugLog.scrollTop = debugLog.scrollHeight;
+// Smoothing state
+let smoothedGazeData = { x: 0, y: 0 };
+let gazeHistory = [];
+const SMOOTHING_FACTOR = 0.3;
+const HISTORY_LENGTH = 5;
+const MIN_MOVEMENT_THRESHOLD = 2;
+
+// Smoothing functions
+function smoothGazeData(rawX, rawY) {
+  // Add to history
+  gazeHistory.push({ x: rawX, y: rawY, timestamp: Date.now() });
   
-  // Also log to console
-  console.log(`[${type}]`, message);
+  // Keep only recent history
+  if (gazeHistory.length > HISTORY_LENGTH) {
+    gazeHistory.shift();
+  }
+  
+  // Calculate weighted average with more weight on recent data
+  let totalWeight = 0;
+  let weightedX = 0;
+  let weightedY = 0;
+  
+  for (let i = 0; i < gazeHistory.length; i++) {
+    const weight = (i + 1) / gazeHistory.length; // More weight for recent data
+    weightedX += gazeHistory[i].x * weight;
+    weightedY += gazeHistory[i].y * weight;
+    totalWeight += weight;
+  }
+  
+  const averageX = weightedX / totalWeight;
+  const averageY = weightedY / totalWeight;
+  
+  // Apply exponential smoothing
+  smoothedGazeData.x = smoothedGazeData.x * (1 - SMOOTHING_FACTOR) + averageX * SMOOTHING_FACTOR;
+  smoothedGazeData.y = smoothedGazeData.y * (1 - SMOOTHING_FACTOR) + averageY * SMOOTHING_FACTOR;
+  
+  return {
+    x: smoothedGazeData.x,
+    y: smoothedGazeData.y
+  };
 }
+
+function shouldUpdateGaze(newX, newY, oldX, oldY) {
+  const distance = Math.sqrt(Math.pow(newX - oldX, 2) + Math.pow(newY - oldY, 2));
+  return distance >= MIN_MOVEMENT_THRESHOLD;
+}
+
+
 
 // Event listeners
 selectImageBtn.addEventListener('click', async () => {
@@ -93,6 +131,7 @@ clearLogBtn.addEventListener('click', () => {
   log('Debug log cleared');
 });
 
+
 // Load and display image
 function loadImage(imagePath) {
   const img = new Image();
@@ -121,47 +160,62 @@ window.addEventListener('resize', updateImageRect);
 
 // Listen for gaze data
 ipcRenderer.on('gaze-data', (event, data) => {
-  // Log first gaze data or significant changes
-  if (!lastGazeData || Math.abs(data.x - (lastGazeData.x || 0)) > 10 || Math.abs(data.y - (lastGazeData.y || 0)) > 10) {
-    log(`Gaze data: Screen(${data.x.toFixed(0)},${data.y.toFixed(0)}) Tracking:${data.tracking} Connected:${data.tracker_connected}`);
-    if (data.windowBounds) {
-      log(`Window position: (${data.windowBounds.x},${data.windowBounds.y}) Size:(${data.windowBounds.width}x${data.windowBounds.height})`);
+  // Skip invalid or zero coordinates early
+  if (!data || !data.tracking || (data.x === 0 && data.y === 0)) {
+    if (data && data.x === 0 && data.y === 0 && !gazeCoords.classList.contains('warning')) {
+      gazeCoords.classList.add('warning');
+      log('Warning: Receiving zero coordinates - check Tobii calibration', 'warning');
     }
+    return;
   }
   
-  lastGazeData = data;
+  // Only process if tracking is active
+  if (!isTracking) {
+    return;
+  }
   
-  if (isTracking && data.tracking) {
-    // Update coordinates display with screen coordinates
-    gazeCoords.textContent = `Screen X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`;
-    
-    // Check if coordinates are non-zero
-    if (data.x === 0 && data.y === 0) {
-      if (!gazeCoords.classList.contains('warning')) {
-        gazeCoords.classList.add('warning');
-        log('Warning: Receiving zero coordinates - check Tobii calibration', 'warning');
-      }
-    } else {
-      gazeCoords.classList.remove('warning');
-    }
-    
-    // Use window bounds from main process for accurate conversion
-    const windowBounds = data.windowBounds || {
-      x: window.screenX,
-      y: window.screenY
-    };
-    
-    // Convert screen coordinates to window coordinates
-    const windowX = data.x - windowBounds.x;
-    const windowY = data.y - windowBounds.y;
-    
-    // Get container rect relative to window
-    const containerRect = imageDisplay.parentElement.getBoundingClientRect();
-    
-    // Calculate position within the container
-    const containerX = windowX - containerRect.left;
-    const containerY = windowY - containerRect.top;
-    
+  // Apply smoothing to reduce jitter
+  const smoothed = smoothGazeData(data.x, data.y);
+  
+  // Only update if movement is significant enough
+  const lastX = lastGazeData ? lastGazeData.x : data.x;
+  const lastY = lastGazeData ? lastGazeData.y : data.y;
+  
+  if (!shouldUpdateGaze(smoothed.x, smoothed.y, lastX, lastY) && lastGazeData) {
+    return;
+  }
+  
+  // Log significant changes only
+  if (!lastGazeData || Math.abs(smoothed.x - lastX) > 20 || Math.abs(smoothed.y - lastY) > 20) {
+    log(`Gaze data: Screen(${smoothed.x.toFixed(0)},${smoothed.y.toFixed(0)}) Tracking:${data.tracking}`);
+  }
+  
+  lastGazeData = { x: smoothed.x, y: smoothed.y, tracking: data.tracking };
+  gazeCoords.classList.remove('warning');
+  
+  // Update coordinates display with wave effect
+  const waveEffect = generateWaveEffect(smoothed.x, smoothed.y);
+  gazeCoords.textContent = `${waveEffect} Screen X: ${Math.round(smoothed.x)}, Y: ${Math.round(smoothed.y)} ${waveEffect}`;
+  
+  // Use window bounds from main process for accurate conversion
+  const windowBounds = data.windowBounds || {
+    x: window.screenX,
+    y: window.screenY
+  };
+  
+  // Convert screen coordinates to window coordinates
+  const windowX = smoothed.x - windowBounds.x;
+  const windowY = smoothed.y - windowBounds.y;
+  
+  // Get container rect relative to window (cache this if possible)
+  const containerRect = imageDisplay.parentElement.getBoundingClientRect();
+  
+  // Calculate position within the container
+  const containerX = windowX - containerRect.left;
+  const containerY = windowY - containerRect.top;
+  
+  // Use requestAnimationFrame for smooth updates
+  requestAnimationFrame(() => {
     // Update gaze pointer position
     gazePointer.style.left = `${containerX}px`;
     gazePointer.style.top = `${containerY}px`;
@@ -179,7 +233,7 @@ ipcRenderer.on('gaze-data', (event, data) => {
         removeHighlightRegions();
       }
     }
-  }
+  });
 });
 
 // Create highlight region around gaze point
@@ -201,6 +255,38 @@ function updateHighlightRegion(x, y) {
 function removeHighlightRegions() {
   const highlights = document.querySelectorAll('.highlight-region');
   highlights.forEach(h => h.remove());
+}
+
+
+// Generate wave effect based on coordinates
+function generateWaveEffect(x, y) {
+  const screenWidth = window.screen.width;
+  const screenHeight = window.screen.height;
+  
+  // Normalize coordinates to 0-1 range
+  const normalizedX = Math.max(0, Math.min(1, x / screenWidth));
+  const normalizedY = Math.max(0, Math.min(1, y / screenHeight));
+  
+  // Create wave pattern based on position
+  const waveIntensity = Math.floor(normalizedX * 10) + Math.floor(normalizedY * 5);
+  const waveLength = Math.max(3, Math.min(15, waveIntensity));
+  
+  // Generate the wave lines
+  const leftWave = '-'.repeat(waveLength);
+  const rightWave = '-'.repeat(Math.max(1, 15 - waveLength));
+  
+  return `${leftWave} ${rightWave}`;
+}
+
+// Debug logging
+function log(message, type = 'info') {
+  const timestamp = new Date().toLocaleTimeString();
+  const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+  debugLog.textContent += logEntry;
+  debugLog.scrollTop = debugLog.scrollHeight;
+  
+  // Also log to console
+  console.log(`[${type}]`, message);
 }
 
 // Check Talon status periodically

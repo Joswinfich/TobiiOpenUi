@@ -90,20 +90,23 @@ body {
 
 .gaze-pointer {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  background-color: #ff0000;
+  width: 120px;
+  height: 120px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   pointer-events: none;
   z-index: 1000;
   display: none;
-  box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
   transform: translate(-50%, -50%);
+  transition: left 0.08s ease-out, top 0.08s ease-out;
 }
 
 .gaze-pointer.active {
   display: block;
 }
+
 
 .status-bar {
   display: flex;
@@ -126,16 +129,6 @@ body {
 
 .status-bar span.warning {
   color: #ffff00;
-}
-
-.highlight-region {
-  position: absolute;
-  background-color: rgba(255, 255, 0, 0.3);
-  border: 2px solid #ffff00;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 998;
-  transition: all 0.1s ease;
 }
 
 .retry-btn {
@@ -197,3 +190,14 @@ body {
   background-color: #666;
   color: #fff;
 }
+
+.highlight-region {
+  position: absolute;
+  background-color: rgba(255, 255, 0, 0.3);
+  border: 2px solid #ffff00;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 998;
+  transition: all 0.08s ease-out;
+}
+

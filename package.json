@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "gaze": "node gaze-monitor.js",
+    "gaze-watch": "node gaze-monitor.js --continuous"
   },
   "author": "",
   "license": "MIT",

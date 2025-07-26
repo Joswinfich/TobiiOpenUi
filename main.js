@@ -81,7 +81,7 @@ ipcMain.handle('start-tracking', () => {
     } catch (error) {
       // Silently ignore read errors
     }
-  }, 16); // ~60fps
+  }, 20); // ~50fps - slightly reduced for better performance while maintaining smoothness
   
   return true;
 });
