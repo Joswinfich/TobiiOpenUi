@@ -90,6 +90,11 @@ startTrackingBtn.addEventListener('click', async () => {
       trackingStatus.textContent = 'Tracking: Active';
       trackingStatus.classList.remove('error');
       gazePointer.classList.add('active');
+      imageDisplay.classList.add('tracking');
+      
+      // Create focus overlay
+      createFocusOverlay();
+      
       log('Eye tracking started successfully');
     } else {
       log('Failed to start eye tracking', 'error');
@@ -107,7 +112,11 @@ stopTrackingBtn.addEventListener('click', async () => {
       stopTrackingBtn.disabled = true;
       trackingStatus.textContent = 'Tracking: Off';
       gazePointer.classList.remove('active');
-      removeHighlightRegions();
+      imageDisplay.classList.remove('tracking');
+      
+      // Remove focus overlay
+      removeFocusOverlay();
+      
       log('Eye tracking stopped');
     }
   }
@@ -142,16 +151,78 @@ function loadImage(imagePath) {
     img.style.objectFit = 'contain';
     imageDisplay.appendChild(img);
     currentImage = img;
+    
+    // Store original image source for clear drawing
+    window.originalImageSrc = imagePath;
+    
+    // Update clear image if it exists
+    if (window.clearImage) {
+      window.clearImage.src = imagePath;
+    }
+    
+    // Clear any existing focus overlay to prevent showing old image
+    if (window.focusOverlay && window.focusCtx) {
+      window.focusCtx.clearRect(0, 0, window.focusOverlay.width, window.focusOverlay.height);
+    }
+    
     fileName.textContent = path.basename(imagePath);
     updateImageRect();
   };
   img.src = imagePath;
 }
 
+
+// Create focus overlay
+function createFocusOverlay() {
+  if (!currentImage || window.focusOverlay) return;
+  
+  const overlay = document.createElement('canvas');
+  overlay.id = 'focus-overlay';
+  overlay.style.position = 'absolute';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.zIndex = '999';
+  
+  const imageContainer = imageDisplay.parentElement;
+  imageContainer.appendChild(overlay);
+  
+  window.focusOverlay = overlay;
+  window.focusCtx = overlay.getContext('2d');
+  
+  // Create a hidden image element with the original unblurred image
+  window.clearImage = new Image();
+  window.clearImage.src = window.originalImageSrc;
+  
+  updateFocusOverlaySize();
+}
+
+// Remove focus overlay
+function removeFocusOverlay() {
+  if (window.focusOverlay) {
+    window.focusOverlay.remove();
+    window.focusOverlay = null;
+    window.focusCtx = null;
+    window.clearImage = null;
+  }
+}
+
+// Update focus overlay size
+function updateFocusOverlaySize() {
+  if (!window.focusOverlay || !currentImage) return;
+  
+  const rect = imageDisplay.parentElement.getBoundingClientRect();
+  window.focusOverlay.width = rect.width;
+  window.focusOverlay.height = rect.height;
+  window.focusOverlay.style.width = rect.width + 'px';
+  window.focusOverlay.style.height = rect.height + 'px';
+  window.focusOverlay.style.left = '0';
+  window.focusOverlay.style.top = '0';
+}
+
 // Update image bounding rectangle
 function updateImageRect() {
   if (currentImage) {
     imageRect = currentImage.getBoundingClientRect();
+    updateFocusOverlaySize();
   }
 }
 
@@ -220,41 +291,58 @@ ipcRenderer.on('gaze-data', (event, data) => {
     gazePointer.style.left = `${containerX}px`;
     gazePointer.style.top = `${containerY}px`;
     
-    // Update highlight if over image
-    if (currentImage && imageRect) {
-      // Check if gaze is within the image bounds
-      const imageX = windowX - imageRect.left;
-      const imageY = windowY - imageRect.top;
-      
-      if (imageX >= 0 && imageX <= imageRect.width &&
-          imageY >= 0 && imageY <= imageRect.height) {
-        updateHighlightRegion(containerX, containerY);
-      } else {
-        removeHighlightRegions();
-      }
+    // Update focus effect
+    if (isTracking && window.focusOverlay) {
+      drawFocusEffect(containerX, containerY);
     }
   });
 });
 
-// Create highlight region around gaze point
-function updateHighlightRegion(x, y) {
-  let highlight = document.querySelector('.highlight-region');
-  if (!highlight) {
-    highlight = document.createElement('div');
-    highlight.className = 'highlight-region';
-    imageDisplay.parentElement.appendChild(highlight);
-  }
+// Draw focus effect on canvas
+function drawFocusEffect(centerX, centerY) {
+  const overlay = window.focusOverlay;
+  const ctx = window.focusCtx;
+  const clearImg = window.clearImage;
   
-  const size = 100;
-  highlight.style.width = `${size}px`;
-  highlight.style.height = `${size}px`;
-  highlight.style.left = `${x - size/2}px`;
-  highlight.style.top = `${y - size/2}px`;
-}
-
-function removeHighlightRegions() {
-  const highlights = document.querySelectorAll('.highlight-region');
-  highlights.forEach(h => h.remove());
+  if (!overlay || !ctx || !currentImage || !clearImg || !clearImg.complete) return;
+  
+  // Clear the overlay
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  
+  // Save context state
+  ctx.save();
+  
+  // Create circular clipping path
+  const radius = 60;
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.clip();
+  
+  // Get displayed dimensions and position
+  const imgRect = currentImage.getBoundingClientRect();
+  const containerRect = imageDisplay.parentElement.getBoundingClientRect();
+  
+  // Calculate image position relative to container
+  const imgX = imgRect.left - containerRect.left;
+  const imgY = imgRect.top - containerRect.top;
+  
+  // Draw the clear unblurred image
+  ctx.drawImage(clearImg, imgX, imgY, imgRect.width, imgRect.height);
+  
+  // Add soft edge
+  const gradient = ctx.createRadialGradient(centerX, centerY, radius * 0.7, centerX, centerY, radius);
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(0.8, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
+  
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Restore context
+  ctx.restore();
 }
 
 

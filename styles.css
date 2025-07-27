@@ -79,6 +79,11 @@ body {
   max-height: 100%;
   object-fit: contain;
   display: block;
+  transition: filter 0.3s ease;
+}
+
+#imageDisplay.tracking img {
+  filter: blur(15px);
 }
 
 .placeholder-text {
@@ -92,15 +97,31 @@ body {
   position: absolute;
   width: 120px;
   height: 120px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background-color: transparent;
+  border: 2px solid rgba(255, 0, 0, 0.8);
   border-radius: 50%;
   pointer-events: none;
   z-index: 1000;
   display: none;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
   transform: translate(-50%, -50%);
   transition: left 0.08s ease-out, top 0.08s ease-out;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  overflow: hidden;
+}
+
+.gaze-pointer::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  backdrop-filter: blur(0px) !important;
+  -webkit-backdrop-filter: blur(0px) !important;
+  z-index: 1;
 }
 
 .gaze-pointer.active {
@@ -191,13 +212,5 @@ body {
   color: #fff;
 }
 
-.highlight-region {
-  position: absolute;
-  background-color: rgba(255, 255, 0, 0.3);
-  border: 2px solid #ffff00;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 998;
-  transition: all 0.08s ease-out;
-}
+/* Highlight region removed per user request */
 
