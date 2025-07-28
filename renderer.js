@@ -186,14 +186,11 @@ settingsClose.addEventListener('click', () => {
 // Settings functionality
 const blurSlider = document.getElementById('blurSlider');
 const focusSlider = document.getElementById('focusSlider');
-const featherSlider = document.getElementById('featherSlider');
 const blurValue = document.getElementById('blurValue');
 const focusValue = document.getElementById('focusValue');
-const featherValue = document.getElementById('featherValue');
 
 let blurAmount = 8;
-let focusRadius = 48;
-let featherRadius = 110;
+let focusRadius = 100;
 
 blurSlider.addEventListener('input', (e) => {
   blurAmount = parseInt(e.target.value);
@@ -206,14 +203,10 @@ focusSlider.addEventListener('input', (e) => {
   focusValue.textContent = `${focusRadius}px`;
 });
 
-featherSlider.addEventListener('input', (e) => {
-  featherRadius = parseInt(e.target.value);
-  featherValue.textContent = `${featherRadius}px`;
-});
-
 function updateBlurEffect() {
   imageDisplay.style.setProperty('--blur-amount', `${blurAmount}px`);
 }
+
 
 // Dragging functionality
 function makeDraggable(element, handle) {
@@ -256,9 +249,6 @@ function loadImage(imagePath) {
   const img = new Image();
   img.onload = () => {
     imageDisplay.innerHTML = '';
-    img.style.maxWidth = '100%';
-    img.style.maxHeight = '100%';
-    img.style.objectFit = 'contain';
     imageDisplay.appendChild(img);
     currentImage = img;
     
@@ -437,8 +427,8 @@ function drawFocusEffect(centerX, centerY) {
   const maskCtx = maskCanvas.getContext('2d');
   
   // Draw radial gradient on mask (using dynamic values)
-  const innerRadius = focusRadius;
-  const outerRadius = featherRadius;
+  const innerRadius = focusRadius * 0.5;
+  const outerRadius = focusRadius;
   const gradient = maskCtx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
   gradient.addColorStop(0, 'rgba(255,255,255,1)');
   gradient.addColorStop(0.4, 'rgba(255,255,255,0.9)');
@@ -461,6 +451,8 @@ function drawFocusEffect(centerX, centerY) {
   
   ctx.restore();
 }
+
+
 
 
 // Generate wave effect based on coordinates
