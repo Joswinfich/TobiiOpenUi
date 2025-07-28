@@ -23,13 +23,24 @@
       
       <div class="controls-right">
         <div class="status-bar">
-          <span id="talonStatus">Talon: Checking...</span>
-          <span id="trackingStatus">Tracking: Off</span>
-          <span id="gazeCoords">X: 0, Y: 0</span>
-          <button id="retryBtn" class="retry-btn">Retry Connection</button>
-          <button id="debugToggleBtn" class="debug-toggle-btn">Debug</button>
+          <div class="status-coords">
+            <span id="gazeCoords">X: 0, Y: 0</span>
+          </div>
+          <div class="status-info">
+            <span id="talonStatus">Talon: Checking...</span>
+            <span id="trackingStatus">Tracking: Off</span>
+          </div>
+          <div class="status-buttons">
+            <button id="retryBtn" class="retry-btn">Retry Connection</button>
+            <button id="debugCube" class="cube-button debug-cube">
+              <div class="cube-icon debug-icon"></div>
+            </button>
+            <button id="settingsCube" class="cube-button settings-cube">
+              <div class="cube-icon settings-icon"></div>
+            </button>
+          </div>
         </div>
-        <canvas id="gazeGraph" class="gaze-graph" width="100" height="30"></canvas>
+        <canvas id="gazeGrid" class="gaze-grid" width="80" height="45"></canvas>
       </div>
     </div>
     
@@ -40,10 +51,45 @@
       <div id="gazePointer" class="gaze-pointer"></div>
     </div>
     
-    <div class="debug-panel" id="debugPanel" style="display: none;">
-      <h3>Debug Log</h3>
-      <div id="debugLog" class="debug-log"></div>
-      <button id="clearLogBtn" class="clear-log-btn">Clear Log</button>
+
+    <!-- Debug Panel -->
+    <div class="floating-panel debug-panel" id="debugPanel" style="display: none;">
+      <div class="panel-header" id="debugHeader">
+        <span>Debug Log</span>
+        <button class="panel-close" id="debugClose">×</button>
+      </div>
+      <div class="panel-content">
+        <div id="debugLog" class="debug-log"></div>
+        <div class="debug-controls">
+          <button id="clearLogBtn" class="clear-log-btn">Clear Log</button>
+          <button id="copyLogBtn" class="copy-log-btn">Copy All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="floating-panel settings-panel" id="settingsPanel" style="display: none;">
+      <div class="panel-header" id="settingsHeader">
+        <span>Settings</span>
+        <button class="panel-close" id="settingsClose">×</button>
+      </div>
+      <div class="panel-content">
+        <div class="setting-item">
+          <label>Blur Amount:</label>
+          <input type="range" id="blurSlider" min="0" max="20" value="8">
+          <span id="blurValue">8px</span>
+        </div>
+        <div class="setting-item">
+          <label>Focus Circle Size:</label>
+          <input type="range" id="focusSlider" min="30" max="100" value="48">
+          <span id="focusValue">48px</span>
+        </div>
+        <div class="setting-item">
+          <label>Feather Amount:</label>
+          <input type="range" id="featherSlider" min="50" max="150" value="110">
+          <span id="featherValue">110px</span>
+        </div>
+      </div>
     </div>
   </div>
   

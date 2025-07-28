@@ -110,7 +110,7 @@ body {
 }
 
 #imageDisplay.tracking img {
-  filter: blur(8px);
+  filter: blur(var(--blur-amount, 8px));
 }
 
 .placeholder-text {
@@ -145,6 +145,27 @@ body {
   font-size: 11px;
   font-family: monospace;
   align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.status-coords {
+  flex: 1;
+  min-width: 200px;
+}
+
+.status-info {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.status-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .status-bar span {
@@ -190,7 +211,7 @@ body {
   border-color: #ffff00;
 }
 
-.gaze-graph {
+.gaze-grid {
   background-color: rgba(0, 0, 0, 0.5);
   border: 1px solid #333;
   border-radius: 3px;
@@ -202,25 +223,202 @@ body {
   color: #1a1a1a;
 }
 
-.debug-panel {
-  background-color: rgba(42, 42, 42, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid #444;
-  padding: 8px;
-  max-height: 80px;
+/* Taskbar Cube Buttons */
+.cube-button {
+  background: linear-gradient(45deg, #333, #555);
+  border: 1px solid #666;
+  border-radius: 6px;
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  user-select: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
 }
 
-.debug-panel h3 {
-  color: #ffffff;
-  margin-bottom: 10px;
+.cube-button:hover {
+  background: linear-gradient(45deg, #555, #777);
+  transform: scale(1.05);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.cube-button:active {
+  transform: scale(0.95);
+}
+
+.cube-icon {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Debug Icon (Bug shape) */
+.debug-icon {
+  background: #fff;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  position: relative;
+}
+
+.debug-icon::before {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 6px;
+  background: #333;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.debug-icon::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  background: #333;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+  box-shadow: 0 -3px 0 #333, 0 3px 0 #333;
+}
+
+/* Settings Icon (Gear shape) */
+.settings-icon {
+  background: #fff;
+  border-radius: 2px;
+  position: relative;
+}
+
+.settings-icon::before {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #333;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.settings-icon::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 16px;
+  background: #fff;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 
+    6px 0 0 #fff,
+    -6px 0 0 #fff,
+    3px -3px 0 #fff,
+    -3px -3px 0 #fff,
+    3px 3px 0 #fff,
+    -3px 3px 0 #fff;
+}
+
+.cube-button:hover .cube-icon {
+  transform: scale(1.1);
+}
+
+/* Floating Panels */
+.floating-panel {
+  position: fixed;
+  background-color: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 2500;
+  min-width: 300px;
+  max-width: 500px;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.panel-header {
+  background-color: rgba(42, 42, 42, 0.9);
+  padding: 10px 15px;
+  border-bottom: 1px solid #555;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  user-select: none;
+}
+
+.panel-header span {
+  color: #fff;
+  font-weight: bold;
   font-size: 14px;
+}
+
+.panel-close {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-close:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.panel-content {
+  padding: 15px;
+}
+
+.debug-panel {
+  top: 100px;
+  left: 50px;
+}
+
+.settings-panel {
+  top: 100px;
+  right: 80px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.setting-item label {
+  color: #fff;
+  font-size: 12px;
+  min-width: 120px;
+}
+
+.setting-item input[type="range"] {
+  flex: 1;
+  accent-color: #00ff00;
+}
+
+.setting-item span {
+  color: #00ff00;
+  font-size: 11px;
+  min-width: 40px;
+  font-family: monospace;
 }
 
 .debug-log {
@@ -230,25 +428,42 @@ body {
   border: 1px solid #333;
   padding: 10px;
   font-family: monospace;
-  font-size: 12px;
+  font-size: 11px;
   color: #00ff00;
   white-space: pre-wrap;
+  max-height: 200px;
+  min-height: 120px;
 }
 
-.clear-log-btn {
+.debug-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.clear-log-btn, .copy-log-btn {
   background-color: transparent;
   border: 1px solid #666;
   color: #aaa;
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  margin-top: 10px;
-  align-self: flex-start;
+  transition: all 0.3s ease;
 }
 
-.clear-log-btn:hover {
+.clear-log-btn:hover, .copy-log-btn:hover {
   background-color: #666;
   color: #fff;
+}
+
+.copy-log-btn {
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.copy-log-btn:hover {
+  background-color: #00ff00;
+  color: #1a1a1a;
 }
 
 /* Highlight region removed per user request */

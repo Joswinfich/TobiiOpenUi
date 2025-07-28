@@ -14,17 +14,23 @@ const gazeCoords = document.getElementById('gazeCoords');
 const retryBtn = document.getElementById('retryBtn');
 const debugLog = document.getElementById('debugLog');
 const clearLogBtn = document.getElementById('clearLogBtn');
-const debugToggleBtn = document.getElementById('debugToggleBtn');
+const copyLogBtn = document.getElementById('copyLogBtn');
+const debugCube = document.getElementById('debugCube');
+const settingsCube = document.getElementById('settingsCube');
 const debugPanel = document.getElementById('debugPanel');
-const gazeGraph = document.getElementById('gazeGraph');
-const gazeGraphCtx = gazeGraph.getContext('2d');
+const settingsPanel = document.getElementById('settingsPanel');
+const debugClose = document.getElementById('debugClose');
+const settingsClose = document.getElementById('settingsClose');
+const gazeGrid = document.getElementById('gazeGrid');
+const gazeGridCtx = gazeGrid.getContext('2d');
 
 // State
 let isTracking = false;
 let currentImage = null;
 let imageRect = null;
 let lastGazeData = null;
-let graphData = [];
+let currentGazePos = { x: 0, y: 0 };
+let gazeTrail = [];
 
 // Smoothing state
 let smoothedGazeData = { x: 0, y: 0 };
@@ -145,11 +151,104 @@ clearLogBtn.addEventListener('click', () => {
   log('Debug log cleared');
 });
 
-debugToggleBtn.addEventListener('click', () => {
+copyLogBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(debugLog.textContent);
+    const originalText = copyLogBtn.textContent;
+    copyLogBtn.textContent = 'Copied!';
+    setTimeout(() => {
+      copyLogBtn.textContent = originalText;
+    }, 1000);
+  } catch (err) {
+    log('Failed to copy log to clipboard', 'error');
+  }
+});
+
+// Cube button event listeners
+debugCube.addEventListener('click', () => {
   const isVisible = debugPanel.style.display !== 'none';
   debugPanel.style.display = isVisible ? 'none' : 'block';
-  debugToggleBtn.classList.toggle('active', !isVisible);
 });
+
+settingsCube.addEventListener('click', () => {
+  const isVisible = settingsPanel.style.display !== 'none';
+  settingsPanel.style.display = isVisible ? 'none' : 'block';
+});
+
+debugClose.addEventListener('click', () => {
+  debugPanel.style.display = 'none';
+});
+
+settingsClose.addEventListener('click', () => {
+  settingsPanel.style.display = 'none';
+});
+
+// Settings functionality
+const blurSlider = document.getElementById('blurSlider');
+const focusSlider = document.getElementById('focusSlider');
+const featherSlider = document.getElementById('featherSlider');
+const blurValue = document.getElementById('blurValue');
+const focusValue = document.getElementById('focusValue');
+const featherValue = document.getElementById('featherValue');
+
+let blurAmount = 8;
+let focusRadius = 48;
+let featherRadius = 110;
+
+blurSlider.addEventListener('input', (e) => {
+  blurAmount = parseInt(e.target.value);
+  blurValue.textContent = `${blurAmount}px`;
+  updateBlurEffect();
+});
+
+focusSlider.addEventListener('input', (e) => {
+  focusRadius = parseInt(e.target.value);
+  focusValue.textContent = `${focusRadius}px`;
+});
+
+featherSlider.addEventListener('input', (e) => {
+  featherRadius = parseInt(e.target.value);
+  featherValue.textContent = `${featherRadius}px`;
+});
+
+function updateBlurEffect() {
+  imageDisplay.style.setProperty('--blur-amount', `${blurAmount}px`);
+}
+
+// Dragging functionality
+function makeDraggable(element, handle) {
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+  
+  handle.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    const rect = element.getBoundingClientRect();
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+    element.style.zIndex = '3500';
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const x = e.clientX - dragOffset.x;
+    const y = e.clientY - dragOffset.y;
+    
+    element.style.left = `${x}px`;
+    element.style.top = `${y}px`;
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      element.style.zIndex = '2500';
+    }
+  });
+}
+
+// Make panels draggable
+makeDraggable(debugPanel, document.getElementById('debugHeader'));
+makeDraggable(settingsPanel, document.getElementById('settingsHeader'));
 
 
 // Load and display image
@@ -275,8 +374,8 @@ ipcRenderer.on('gaze-data', (event, data) => {
   lastGazeData = { x: smoothed.x, y: smoothed.y, tracking: data.tracking };
   gazeCoords.classList.remove('warning');
   
-  // Update gaze graph
-  updateGazeGraph(smoothed.x, smoothed.y);
+  // Update gaze grid
+  updateGazeGrid(smoothed.x, smoothed.y);
   
   // Update coordinates display with wave effect
   const waveEffect = generateWaveEffect(smoothed.x, smoothed.y);
@@ -337,9 +436,9 @@ function drawFocusEffect(centerX, centerY) {
   maskCanvas.height = overlay.height;
   const maskCtx = maskCanvas.getContext('2d');
   
-  // Draw radial gradient on mask (20% bigger with longer feather)
-  const innerRadius = 48;  // 20% bigger than 40
-  const outerRadius = 110; // Extended feathering
+  // Draw radial gradient on mask (using dynamic values)
+  const innerRadius = focusRadius;
+  const outerRadius = featherRadius;
   const gradient = maskCtx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
   gradient.addColorStop(0, 'rgba(255,255,255,1)');
   gradient.addColorStop(0.4, 'rgba(255,255,255,0.9)');
@@ -384,48 +483,82 @@ function generateWaveEffect(x, y) {
   return `${leftWave} ${rightWave}`;
 }
 
-// Update gaze graph
-function updateGazeGraph(x, y) {
-  const maxPoints = 50;
-  const distance = lastGazeData ? 
-    Math.sqrt(Math.pow(x - lastGazeData.x, 2) + Math.pow(y - lastGazeData.y, 2)) : 0;
+// Update gaze grid
+function updateGazeGrid(x, y) {
+  const screenWidth = window.screen.width;
+  const screenHeight = window.screen.height;
   
-  graphData.push(distance);
-  if (graphData.length > maxPoints) {
-    graphData.shift();
+  // Normalize coordinates to grid position
+  const gridX = Math.floor((x / screenWidth) * 16); // 16 columns
+  const gridY = Math.floor((y / screenHeight) * 9);  // 9 rows
+  
+  currentGazePos = { x: gridX, y: gridY };
+  
+  // Add current position to trail
+  const now = Date.now();
+  if (gridX >= 0 && gridX < 16 && gridY >= 0 && gridY < 9) {
+    gazeTrail.push({
+      x: gridX,
+      y: gridY,
+      timestamp: now
+    });
   }
+  
+  // Remove old trail points (older than 2 seconds)
+  gazeTrail = gazeTrail.filter(point => now - point.timestamp < 2000);
   
   // Clear canvas
-  gazeGraphCtx.clearRect(0, 0, gazeGraph.width, gazeGraph.height);
+  gazeGridCtx.clearRect(0, 0, gazeGrid.width, gazeGrid.height);
   
-  if (graphData.length > 1) {
-    const maxDistance = Math.max(...graphData, 50);
-    
-    gazeGraphCtx.strokeStyle = '#00ff00';
-    gazeGraphCtx.lineWidth = 1;
-    gazeGraphCtx.beginPath();
-    
-    for (let i = 0; i < graphData.length; i++) {
-      const x = (i / (maxPoints - 1)) * gazeGraph.width;
-      const y = gazeGraph.height - ((graphData[i] / maxDistance) * gazeGraph.height);
+  // Draw grid dots
+  const dotSize = 1;
+  const spacingX = gazeGrid.width / 16;
+  const spacingY = gazeGrid.height / 9;
+  
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 16; col++) {
+      const dotX = col * spacingX + spacingX / 2;
+      const dotY = row * spacingY + spacingY / 2;
       
-      if (i === 0) {
-        gazeGraphCtx.moveTo(x, y);
-      } else {
-        gazeGraphCtx.lineTo(x, y);
-      }
+      gazeGridCtx.fillStyle = '#333';
+      gazeGridCtx.fillRect(dotX - dotSize/2, dotY - dotSize/2, dotSize, dotSize);
     }
+  }
+  
+  // Draw fading trail
+  gazeTrail.forEach((point, index) => {
+    const age = now - point.timestamp;
+    const opacity = Math.max(0, 1 - (age / 2000)); // Fade over 2 seconds
+    const size = 2 + (opacity * 2); // Size based on age
     
-    gazeGraphCtx.stroke();
+    const trailX = point.x * spacingX + spacingX / 2;
+    const trailY = point.y * spacingY + spacingY / 2;
+    
+    gazeGridCtx.fillStyle = `rgba(0, 255, 0, ${opacity * 0.6})`;
+    gazeGridCtx.fillRect(trailX - size/2, trailY - size/2, size, size);
+  });
+  
+  // Highlight current gaze position (brightest)
+  if (gridX >= 0 && gridX < 16 && gridY >= 0 && gridY < 9) {
+    const highlightX = gridX * spacingX + spacingX / 2;
+    const highlightY = gridY * spacingY + spacingY / 2;
+    
+    gazeGridCtx.fillStyle = '#00ff00';
+    gazeGridCtx.fillRect(highlightX - 2, highlightY - 2, 4, 4);
   }
 }
+
 
 // Debug logging
 function log(message, type = 'info') {
   const timestamp = new Date().toLocaleTimeString();
   const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
   debugLog.textContent += logEntry;
-  debugLog.scrollTop = debugLog.scrollHeight;
+  
+  // Auto-scroll to bottom
+  requestAnimationFrame(() => {
+    debugLog.scrollTop = debugLog.scrollHeight;
+  });
   
   // Also log to console
   console.log(`[${type}]`, message);
