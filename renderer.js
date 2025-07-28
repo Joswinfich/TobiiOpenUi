@@ -14,12 +14,17 @@ const gazeCoords = document.getElementById('gazeCoords');
 const retryBtn = document.getElementById('retryBtn');
 const debugLog = document.getElementById('debugLog');
 const clearLogBtn = document.getElementById('clearLogBtn');
+const debugToggleBtn = document.getElementById('debugToggleBtn');
+const debugPanel = document.getElementById('debugPanel');
+const gazeGraph = document.getElementById('gazeGraph');
+const gazeGraphCtx = gazeGraph.getContext('2d');
 
 // State
 let isTracking = false;
 let currentImage = null;
 let imageRect = null;
 let lastGazeData = null;
+let graphData = [];
 
 // Smoothing state
 let smoothedGazeData = { x: 0, y: 0 };
@@ -138,6 +143,12 @@ retryBtn.addEventListener('click', async () => {
 clearLogBtn.addEventListener('click', () => {
   debugLog.textContent = '';
   log('Debug log cleared');
+});
+
+debugToggleBtn.addEventListener('click', () => {
+  const isVisible = debugPanel.style.display !== 'none';
+  debugPanel.style.display = isVisible ? 'none' : 'block';
+  debugToggleBtn.classList.toggle('active', !isVisible);
 });
 
 
@@ -264,6 +275,9 @@ ipcRenderer.on('gaze-data', (event, data) => {
   lastGazeData = { x: smoothed.x, y: smoothed.y, tracking: data.tracking };
   gazeCoords.classList.remove('warning');
   
+  // Update gaze graph
+  updateGazeGraph(smoothed.x, smoothed.y);
+  
   // Update coordinates display with wave effect
   const waveEffect = generateWaveEffect(smoothed.x, smoothed.y);
   gazeCoords.textContent = `${waveEffect} Screen X: ${Math.round(smoothed.x)}, Y: ${Math.round(smoothed.y)} ${waveEffect}`;
@@ -309,16 +323,6 @@ function drawFocusEffect(centerX, centerY) {
   // Clear the overlay
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   
-  // Save context state
-  ctx.save();
-  
-  // Create circular clipping path
-  const radius = 60;
-  
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.clip();
-  
   // Get displayed dimensions and position
   const imgRect = currentImage.getBoundingClientRect();
   const containerRect = imageDisplay.parentElement.getBoundingClientRect();
@@ -327,21 +331,35 @@ function drawFocusEffect(centerX, centerY) {
   const imgX = imgRect.left - containerRect.left;
   const imgY = imgRect.top - containerRect.top;
   
-  // Draw the clear unblurred image
+  // Create an off-screen canvas for the gradient mask
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = overlay.width;
+  maskCanvas.height = overlay.height;
+  const maskCtx = maskCanvas.getContext('2d');
+  
+  // Draw radial gradient on mask (20% bigger with longer feather)
+  const innerRadius = 48;  // 20% bigger than 40
+  const outerRadius = 110; // Extended feathering
+  const gradient = maskCtx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.4, 'rgba(255,255,255,0.9)');
+  gradient.addColorStop(0.7, 'rgba(255,255,255,0.5)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  
+  maskCtx.fillStyle = gradient;
+  maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+  
+  // Set composite operation to use the gradient as alpha
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  
+  // Draw the clear image
   ctx.drawImage(clearImg, imgX, imgY, imgRect.width, imgRect.height);
   
-  // Add soft edge
-  const gradient = ctx.createRadialGradient(centerX, centerY, radius * 0.7, centerX, centerY, radius);
-  gradient.addColorStop(0, 'rgba(0,0,0,0)');
-  gradient.addColorStop(0.8, 'rgba(0,0,0,0)');
-  gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
+  // Apply the gradient mask
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(maskCanvas, 0, 0);
   
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Restore context
   ctx.restore();
 }
 
@@ -364,6 +382,42 @@ function generateWaveEffect(x, y) {
   const rightWave = '-'.repeat(Math.max(1, 15 - waveLength));
   
   return `${leftWave} ${rightWave}`;
+}
+
+// Update gaze graph
+function updateGazeGraph(x, y) {
+  const maxPoints = 50;
+  const distance = lastGazeData ? 
+    Math.sqrt(Math.pow(x - lastGazeData.x, 2) + Math.pow(y - lastGazeData.y, 2)) : 0;
+  
+  graphData.push(distance);
+  if (graphData.length > maxPoints) {
+    graphData.shift();
+  }
+  
+  // Clear canvas
+  gazeGraphCtx.clearRect(0, 0, gazeGraph.width, gazeGraph.height);
+  
+  if (graphData.length > 1) {
+    const maxDistance = Math.max(...graphData, 50);
+    
+    gazeGraphCtx.strokeStyle = '#00ff00';
+    gazeGraphCtx.lineWidth = 1;
+    gazeGraphCtx.beginPath();
+    
+    for (let i = 0; i < graphData.length; i++) {
+      const x = (i / (maxPoints - 1)) * gazeGraph.width;
+      const y = gazeGraph.height - ((graphData[i] / maxDistance) * gazeGraph.height);
+      
+      if (i === 0) {
+        gazeGraphCtx.moveTo(x, y);
+      } else {
+        gazeGraphCtx.lineTo(x, y);
+      }
+    }
+    
+    gazeGraphCtx.stroke();
+  }
 }
 
 // Debug logging

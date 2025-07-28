@@ -8,13 +8,13 @@ let gazeInterval;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    fullscreen: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     },
-    backgroundColor: '#1a1a1a'
+    backgroundColor: '#1a1a1a',
+    frame: false
   });
 
   mainWindow.loadFile('index.html');
