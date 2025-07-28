@@ -47,10 +47,7 @@ The application uses Talon's gaze control system to access your Tobii 5 eye trac
 ## Troubleshooting
 
 - If Talon shows "Not Connected", make sure:
-  - Talon is running
-  - You've said "start eye tracking" in Talon
-  - Your Tobii 5 is properly connected and calibrated
+  - To restart talon with application running.
+  - selected only eye tracking and not head tracking.
 
-- If tracking seems laggy:
-  - Check that Talon's eye tracking is properly calibrated
-  - Ensure no other applications are using the eye tracker
+
