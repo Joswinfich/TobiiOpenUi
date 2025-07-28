@@ -17,7 +17,7 @@ An open-source eye tracking interface that integrates with Talon and your Tobii 
 
 2. Make sure Talon is running and your Tobii 5 is connected
 
-3. Enable eye tracking in Talon by saying: **"start eye tracking"**
+3. Enable eye tracking in Talon by **"start eye tracking"**
 
 ## Running the Application
 
