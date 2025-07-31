@@ -400,7 +400,7 @@ body {
 .setting-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 15px;
 }
 
@@ -415,11 +415,71 @@ body {
   accent-color: #00ff00;
 }
 
+.setting-item input[type="range"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .setting-item span {
   color: #00ff00;
   font-size: 11px;
   min-width: 40px;
   font-family: monospace;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 20px;
+  background-color: #333;
+  transition: 0.3s;
+  border-radius: 10px;
+  border: 1px solid #666;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 1px;
+  top: 1px;
+  background-color: #aaa;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #00ff00;
+  border-color: #00ff00;
+}
+
+input:focus + .toggle-slider {
+  box-shadow: 0 0 1px #00ff00;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(21px);
+  background-color: #fff;
 }
 
 .debug-log {

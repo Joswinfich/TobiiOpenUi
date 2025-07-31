@@ -184,13 +184,23 @@ settingsClose.addEventListener('click', () => {
 });
 
 // Settings functionality
+const blurToggle = document.getElementById('blurToggle');
 const blurSlider = document.getElementById('blurSlider');
 const focusSlider = document.getElementById('focusSlider');
+const blurStatus = document.getElementById('blurStatus');
 const blurValue = document.getElementById('blurValue');
 const focusValue = document.getElementById('focusValue');
 
+let blurEnabled = true;
 let blurAmount = 8;
 let focusRadius = 100;
+
+blurToggle.addEventListener('change', (e) => {
+  blurEnabled = e.target.checked;
+  blurStatus.textContent = blurEnabled ? 'ON' : 'OFF';
+  blurSlider.disabled = !blurEnabled;
+  updateBlurEffect();
+});
 
 blurSlider.addEventListener('input', (e) => {
   blurAmount = parseInt(e.target.value);
@@ -204,7 +214,11 @@ focusSlider.addEventListener('input', (e) => {
 });
 
 function updateBlurEffect() {
-  imageDisplay.style.setProperty('--blur-amount', `${blurAmount}px`);
+  if (blurEnabled) {
+    imageDisplay.style.setProperty('--blur-amount', `${blurAmount}px`);
+  } else {
+    imageDisplay.style.setProperty('--blur-amount', '0px');
+  }
 }
 
 
